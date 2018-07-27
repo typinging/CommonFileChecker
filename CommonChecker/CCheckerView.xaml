@@ -1,0 +1,96 @@
+﻿<Window x:Class="CommonChecker.CCheckerMainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CommonChecker"
+        xmlns:MaterialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d" AllowDrop="True" Drop="Window_Drop" 
+        Title="CommonChecker" Height="450" Width="800">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Button.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.PopupBox.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.TextBlock.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="booleanToVisibilityCOnverter"/>
+            <SolidColorBrush x:Key="TitleForeground" Color="White" /> 
+            <Style x:Key="DirectoryTitleToggleButton" TargetType="ToggleButton">
+                <Setter Property="Foreground" Value="{StaticResource TitleForeground}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate>
+                            <TextBlock Text="{TemplateBinding Tag}" Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <DataTemplate x:Key="DirectoryItem">
+                <StackPanel>
+                    <Path x:Name="DirectoryPath" Width="50" Height="50" Stretch="Uniform" Fill="Gray" Data="F1 M 891.292,90.656L 491.521,90.656C 400.86,90.656 400.86,-1.52588e-005 313.479,-1.52588e-005L 90.656,-1.52588e-005C 40.412,-1.52588e-005 0,41.504 0,90.656L 0,714.343C 0,764.588 40.412,805 90.656,805L 891.292,805C 941.536,805 981.948,763.495 981.948,714.343L 981.948,176.948C 978.672,126.703 941.536,90.656 891.292,90.656 Z M 937.167,708.88C 937.167,731.817 918.593,754.755 891.292,754.755L 90.656,754.755C 67.7187,754.755 44.7813,736.187 44.7813,708.88L 44.7813,267.604L 931.703,267.604L 931.703,708.88M 937.167,222.823L 44.7813,222.823L 44.7813,90.656C 44.7813,67.7187 63.3493,44.7813 90.656,44.7813L 313.479,44.7813C 382.292,44.7813 382.292,135.443 491.521,135.443L 892.38,135.443C 915.317,135.443 938.255,154.009 938.255,181.317L 938.255,222.823"/>
+                    <TextBlock Height="60" TextWrapping="Wrap" Width="{Binding ElementName=DirectoryPath, Path=ActualWidth}" Text="{Binding Name}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Grid>
+        <MaterialDesign:DialogHost Identifier="RootDialog" SnackbarMessageQueue="{Binding ElementName=MainSnackbar, Path=MessageQueue}">
+            <MaterialDesign:DrawerHost IsLeftDrawerOpen="{Binding ElementName=MenuToggleButton, Path=IsChecked}" IsTopDrawerOpen="{Binding ElementName=CurrentDirectoryToggleButton, Path=IsChecked}" TopDrawerBackground="White">
+                <MaterialDesign:DrawerHost.TopDrawerContent>
+                    <StackPanel>
+                        <StackPanel MinHeight="60" Margin="20,10,20,3" Orientation="Horizontal">
+                            <Button Content="返回上一级" Command="{Binding ReturnParentDirectoryCommand}" Visibility="{Binding ReturnVisibility, Converter={StaticResource booleanToVisibilityCOnverter}}" />
+                        </StackPanel>
+                        <ListBox Margin="20,3,20,10" MinHeight="80" ItemsSource="{Binding CurrentDirectoryNode.ChildrenNode}" ItemTemplate="{StaticResource DirectoryItem}">
+                            <ListBox.Template>
+                                <ControlTemplate TargetType="ListBox">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <WrapPanel Orientation="Horizontal" IsItemsHost="True" ScrollViewer.CanContentScroll="True"/>
+                                    </ScrollViewer>
+                                </ControlTemplate>
+                            </ListBox.Template>
+                            <ListBox.ItemContainerStyle>
+                                <Style BasedOn="{StaticResource MaterialDesignListBoxItem}" TargetType="ListBoxItem">
+                                    <EventSetter Event="MouseDoubleClick" Handler="ListBoxItem_MouseDoubleClick"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </StackPanel>
+                </MaterialDesign:DrawerHost.TopDrawerContent>
+                <MaterialDesign:DrawerHost.LeftDrawerContent>
+                        <DockPanel MinWidth="212">
+                            <ToggleButton Style="{StaticResource MaterialDesignHamburgerToggleButton}" DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="16"
+                                          IsChecked="{Binding ElementName=MenuToggleButton, Path=IsChecked, Mode=TwoWay}"/>
+                            <ListBox x:Name="ViewItemListBox" Margin="0,16" SelectedIndex="0" ItemsSource="{Binding ViewItems}" PreviewMouseLeftButtonUp="ViewItemListBox_PreviewMouseLeftButtonUp">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="local:ViewItem">
+                                        <TextBlock Text="{Binding Name}" Margin="32, 0"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox> 
+                        </DockPanel>
+                    </MaterialDesign:DrawerHost.LeftDrawerContent>
+                <DockPanel LastChildFill="True">
+                    <MaterialDesign:ColorZone Padding="16,16,16,10" MaterialDesign:ShadowAssist.ShadowDepth="Depth2"
+                                            Mode="PrimaryMid" DockPanel.Dock="Top">
+                        <DockPanel>
+                            <ToggleButton x:Name="MenuToggleButton" Style="{StaticResource MaterialDesignHamburgerToggleButton}" IsChecked="False" Foreground="White" />
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="22" Foreground="{StaticResource TitleForeground}">Json/Xml 通用软件</TextBlock>
+                                <ToggleButton x:Name="CurrentDirectoryToggleButton" DockPanel.Dock="Bottom" Margin="5" HorizontalAlignment="Center" FontSize="10" VerticalAlignment="Bottom" 
+                                           Cursor="Hand" Tag="{Binding CurrentDirectoryPath}" Style="{StaticResource DirectoryTitleToggleButton}" IsChecked="False" Foreground="{StaticResource TitleForeground}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </MaterialDesign:ColorZone>
+                    <Grid Margin="0,5">
+                        <ContentControl Content="{Binding ElementName=ViewItemListBox, Path=SelectedItem.View}" />
+                        <MaterialDesign:Snackbar MessageQueue="{MaterialDesign:MessageQueue}" x:Name="MainSnackbar" />
+                    </Grid>
+                </DockPanel>
+            </MaterialDesign:DrawerHost>
+        </MaterialDesign:DialogHost>
+    </Grid>
+</Window>
