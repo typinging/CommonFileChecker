@@ -14,6 +14,7 @@ using GalaSoft.MvvmLight.Command;
 namespace CommonChecker
 {
     public delegate void SetNodeDelegate(CNode node);
+    public delegate void ClearNodeDelegate();
     public delegate void ParseFileDoneDelegate(List<CNode> cNodes);
     public delegate void SetCurrentDirectoryPath(string dPath);
     public delegate void CleanUpDelegate();
@@ -23,14 +24,12 @@ namespace CommonChecker
         private static readonly string jsonFilterString = "*.json";
         private static readonly string xmlFilterString = "*.xml";
 
-        private List<string> jsonPathList = new List<string>();
-        private List<string> xmlPathList = new List<string>();
-
         private CNode DirectoryRoot = null;
 
         private Dispatcher mainDispatcher = null;
 
         public event SetNodeDelegate SetNodeEvent;
+        public event ClearNodeDelegate ClearNodeEvent;
         public event ParseFileDoneDelegate ParseFileDoneEvent;
         public event SetCurrentDirectoryPath SetCurrentPathEvent;
         public event CleanUpDelegate CleanUpEvent;
@@ -60,14 +59,22 @@ namespace CommonChecker
             {
                 _currentDirectoryNode = value;
                 RaisePropertyChanged(nameof(CurrentDirectoryNode));
-                CurrentDirectoryPath = (_currentDirectoryNode as DirectoryCNode).Path;
-                if (CurrentDirectoryNode == DirectoryRoot)
+                if (_currentDirectoryNode != null)
                 {
-                    ReturnVisibility = false;
-                }
-                else
-                {
-                    ReturnVisibility = true;
+                    CurrentDirectoryPath = (_currentDirectoryNode as DirectoryCNode).Path;
+                    ClearNodeEvent();
+                    foreach (CNode node in (_currentDirectoryNode as DirectoryCNode).CurrentNodeList)
+                    {
+                        SetNodeEvent(node);
+                    }
+                    if (CurrentDirectoryNode == DirectoryRoot)
+                    {
+                        ReturnVisibility = false;
+                    }
+                    else
+                    {
+                        ReturnVisibility = true;
+                    }
                 }
             }
         }
@@ -104,6 +111,7 @@ namespace CommonChecker
             SchemeConvertViewModel cvm = new SchemeConvertViewModel(snackbarMessageQueue);
 
             this.SetNodeEvent += svm.SetNode;
+            this.ClearNodeEvent += svm.ClearNode;
             this.ParseFileDoneEvent += cvm.ParseFileDone;
             this.SetCurrentPathEvent += svm.SetCurrentPath;
             this.SetCurrentPathEvent += cvm.SetCurrentPath;
@@ -135,21 +143,11 @@ namespace CommonChecker
 
             Parser psr = new Parser();
             psr.Set_ParserInstance(new XmlParser());
-            ParseFile(psr, xmlPathList);
+            ParseDirectory(rootNode as DirectoryCNode, psr, true);
 
-            CNode node = psr.Get_FileScheme();
-            if (node != null && node.ChildrenNode.Count > 0)
-            {
-                FileSchemeList.Add(node);
-            }
             psr.Set_ParserInstance(new JsonParser());
-            ParseFile(psr, jsonPathList);
+            ParseDirectory(rootNode as DirectoryCNode, psr, false);
 
-            node = psr.Get_FileScheme();
-            if (node != null && node.ChildrenNode.Count > 0)
-            {
-                FileSchemeList.Add(node);
-            }
             ParseFileDoneEvent(FileSchemeList);
         }
 
@@ -158,15 +156,56 @@ namespace CommonChecker
             CurrentDirectoryNode = dNode;
         }
 
-        private void ParseFile(Parser psr, List<string> filePathList)
+        private void ParseDirectory(DirectoryCNode rNode, Parser psr, bool parseFlag)
         {
-            if (filePathList.Count > 0)
+            ParseDirectoryNode(rNode, psr, parseFlag);
+            CNode node = psr.Get_FileScheme();
+            if (node != null && node.ChildrenNode.Count > 0)
+            {
+                FileSchemeList.Add(node);
+                rNode.CurrentNodeList.Add(node);
+            }
+        }
+
+        private void ParseDirectoryNode(DirectoryCNode rNode, Parser psr, bool parseFlag)
+        {
+            if(rNode != null)
+            {
+                List<string> filePathList;
+                CNode dNode;
+                if (parseFlag)
+                {
+                    filePathList = rNode.xmlPathList;
+                    dNode = new XmlCNode();
+                }
+                else
+                {
+                    filePathList = rNode.jsonPathList;
+                    dNode = new JsonCNode();
+                }
+                ParseFile(dNode, psr, filePathList);
+                if (dNode.ChildrenNode.Count > 0)
+                {
+                    rNode.CurrentNodeList.Add(dNode);
+                }
+                foreach (CNode node in rNode.ChildrenNode)
+                {
+                    ParseDirectoryNode(node as DirectoryCNode, psr, parseFlag);
+                }
+            }
+        }
+
+        private CNode ParseFile(CNode dNode, Parser psr, List<string> filePathList)
+        {
+            if (filePathList != null)
             {
                 foreach (string filePath in filePathList)
                 {
                     if (psr.ParseFile(filePath))
                     {
-                        SetNodeEvent((CNode)psr.Get_FileScheme());
+                        CNode node = psr.Get_FileScheme();
+                        SetNodeEvent(node);
+                        psr.MergeNode(dNode, psr.GetCurrentNode());
                     }
                     else
                     {
@@ -175,6 +214,7 @@ namespace CommonChecker
                     }
                 }
             }
+            return dNode;
         }
 
         private void GetDirectories(DirectoryInfo root, CNode rNode, int rank)
@@ -182,11 +222,11 @@ namespace CommonChecker
             rank++;
             foreach (FileInfo fi in root.GetFiles(jsonFilterString))
             {
-                jsonPathList.Add(fi.FullName);
+                (rNode as DirectoryCNode).jsonPathList.Add(fi.FullName);
             }
             foreach (FileInfo fi in root.GetFiles(xmlFilterString))
             {
-                xmlPathList.Add(fi.FullName);
+                (rNode as DirectoryCNode).xmlPathList.Add(fi.FullName);
             }
 
             foreach (DirectoryInfo dir in root.GetDirectories())
@@ -199,8 +239,7 @@ namespace CommonChecker
 
         public override void Cleanup()
         {
-            jsonPathList.Clear();
-            xmlPathList.Clear();
+            CurrentDirectoryNode = null;
             CurrentDirectoryPath = string.Empty;
             DirectoryRoot = null;
             CleanUpEvent();
@@ -219,6 +258,7 @@ namespace CommonChecker
             SchemeViewModel svm = (ViewItems[0].View as FrameworkElement).DataContext as SchemeViewModel;
             SchemeConvertViewModel cvm = (ViewItems[1].View as FrameworkElement).DataContext as SchemeConvertViewModel;
             this.SetNodeEvent -= svm.SetNode;
+            this.ClearNodeEvent -= svm.ClearNode;
             this.ParseFileDoneEvent -= cvm.ParseFileDone;
             this.SetCurrentPathEvent -= svm.SetCurrentPath;
             this.SetCurrentPathEvent -= cvm.SetCurrentPath;

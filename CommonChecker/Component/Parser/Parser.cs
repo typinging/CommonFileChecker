@@ -23,6 +23,11 @@
         {
             return this._parser.CurrentNode;
         }
+
+        public void MergeNode(CNode root, CNode currentNode)
+        {
+            this._parser.MergeNode(root, currentNode);
+        }
     }
 
     //public class Editor

@@ -11,7 +11,10 @@ namespace CommonChecker
         private static readonly int startCount = 1;
         private static readonly int startRank = 0;
 
-        public CNode Root { private set; get; } = new XmlCNode() { Name = "xml", Count = 1,};
+        public CNode Root { private set; get; } = new XmlCNode() { Name = "xml", Count = 1, };
+
+        public CNode DirectoryNode { private set; get; }
+
         public CNode CurrentNode { private set; get; }
 
         public bool Parser(string path)
@@ -35,7 +38,7 @@ namespace CommonChecker
             return result;
         }
 
-        private void MergeNode(CNode root, CNode current)
+        public void MergeNode(CNode root, CNode current)
         {
             if (current != null)
             {
@@ -44,8 +47,8 @@ namespace CommonChecker
                     CNode rnode = root.ChildrenNode.Where(rc => rc.Name == node.Name).FirstOrDefault();
                     if (rnode == null)
                     {
-                        root.ChildrenNode.Add(node);
-                        rnode = root;
+                        rnode = node.Clone() as CNode;
+                        root.ChildrenNode.Add(rnode);
                     }
                     else
                     {

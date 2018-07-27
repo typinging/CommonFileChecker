@@ -12,7 +12,11 @@ namespace CommonChecker
 
         CNode CurrentNode { get; }
 
+        CNode DirectoryNode { get; }
+
         bool Parser(string path);
+
+        void MergeNode(CNode root, CNode current);
     }
 
     public interface IEditor

@@ -177,6 +177,14 @@ namespace CommonChecker
             }
         }
 
+        internal void ClearNode()
+        {
+            if (RootNodeCollection != null)
+            {
+                RootNodeCollection.Clear();
+            }
+        }
+
         internal void SetSelectedNode(FileNode value)
         {
             this.SelectedNode = value;

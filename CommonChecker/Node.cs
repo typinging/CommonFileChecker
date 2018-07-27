@@ -114,6 +114,10 @@ namespace CommonChecker
 
     public class DirectoryCNode : CNode
     {
+        public List<string> jsonPathList { get; set; } = new List<string>();
+        public List<string> xmlPathList { get; set; } = new List<string>();
+
+
         private string _path;
         public string Path
         {
@@ -121,12 +125,13 @@ namespace CommonChecker
             set { _path = value; RaisePropertyChanged(nameof(Path)); }
         }
 
-        private List<CNode> _currentNodeList;
+        private List<CNode> _currentNodeList = new List<CNode>();
         public List<CNode> CurrentNodeList
         {
             get { return _currentNodeList; }
             set { _currentNodeList = value; RaisePropertyChanged(nameof(CurrentNodeList)); }
         }
+
 
         public DirectoryCNode(int rank, string name, CNode parent, string path)
         {
@@ -149,7 +154,6 @@ namespace CommonChecker
             }
             return o;
         }
-
 
     }
 
